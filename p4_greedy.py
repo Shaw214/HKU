@@ -1,10 +1,5 @@
 import random, math, copy
-from turtledemo.penrose import start
-
-from PIL.ImageChops import difference
-
 from p2 import judge
-import sys
 
 def get_sorted_index(num):
     ans = []
@@ -37,7 +32,7 @@ def read_grid_mdp_problem_p4(file_path):
                     break
         problem['grid'].append(temp)
     return problem
-def exploitation(start_pos, epsilon, alpha, q_value, policy, problem,flag):
+def exploitation(start_pos, epsilon, alpha, q_value, policy, problem,flag, change_times):
     i = start_pos[0]
     j = start_pos[1]
     noise = float(problem['noise'])
@@ -72,11 +67,18 @@ def exploitation(start_pos, epsilon, alpha, q_value, policy, problem,flag):
             sample = problem['livingReward'] + problem['discount'] * max(q_value[start_pos[0]][start_pos[1]])
         differ = sample - q_value[start_pos[0]][start_pos[1]][d_num_mapping[direction]]
         q_value[start_pos[0]][start_pos[1]][d_num_mapping[direction]] += alpha * differ
-        max_index = get_sorted_index(q_value[start_pos[0]][start_pos[1]])
-        policy[start_pos[0]][start_pos[1]] = num_d_mapping[max_index[0]]
+        max_q = max(q_value[start_pos[0]][start_pos[1]])
+        before_policy = policy[start_pos[0]][start_pos[1]]
+        max_index = []
+        for x in range(4):
+            if q_value[start_pos[0]][start_pos[1]][x] == max_q:
+                max_index.append(x)
+        policy[start_pos[0]][start_pos[1]] = num_d_mapping[random.choice(max_index)]
+        if before_policy != policy[start_pos[0]][start_pos[1]]:
+            change_times[0] += 1
         # print(f"i,j{i,j}, next_pos{next_pos},sample{sample},differ{differ},policy:{policy[i][j]},true_action:{true_action},direction:{direction},max_index{max_index}")
         # input()
-        exploitation(next_pos, epsilon, alpha, q_value, policy, problem,flag)
+        exploitation(next_pos, epsilon, alpha, q_value, policy, problem,flag, change_times)
         if not flag:
             return
 def main():
@@ -96,17 +98,28 @@ def main():
                 policy[_][__] = '#'
     epsilon = 1
     alpha = 1
-    seach_times = 0
+    search_times = 0
     flag = True
+    change_times = [0]
+    no_change_times = 0
     while True:
-        exploitation(start_pos, epsilon, alpha, Q_value, policy, problem,flag)
-        seach_times += 1
-        if seach_times %80== 0:
+        change_times[0] = 0
+        exploitation(start_pos, epsilon, alpha, Q_value, policy, problem,flag,change_times)
+        search_times += 1
+        if search_times %80== 0:
             alpha = max(0, alpha -0.001)
             epsilon = max(0, epsilon-0.0008)
         if alpha == 0:
             break
-    print(f"epsilon:{epsilon},alpha:{alpha}")
+        if change_times[0] == 0:
+            no_change_times += 1
+        else:
+            no_change_times = 0
+        if no_change_times >= 70:
+            break
+        # print(f"search_times:{search_times},no_change_times:{no_change_times}")
+        # input()
+    print(f"epsilon:{epsilon},alpha:{alpha},no_change_times:{no_change_times}")
     for i in Q_value:
         print(i)
     for i in policy:
